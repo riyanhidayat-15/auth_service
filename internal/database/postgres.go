@@ -16,11 +16,10 @@ func New (ctx context.Context, url string) (*pgxpool.Pool, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if err:=pool.Ping(ctx); err != nil {
+	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
 		return nil, err
 	}
 
 	return pool, nil
-
 }

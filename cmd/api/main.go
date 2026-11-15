@@ -3,14 +3,20 @@ package main
 import (
 	"auth-service/internal/config"
 	"auth-service/internal/database"
+	"auth-service/internal/handler"
+	"auth-service/internal/repository"
+	"auth-service/internal/services"
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func main () {
+	_ = godotenv.Load()
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	cfg, err := config.Load()
 	if err != nil {
@@ -26,15 +32,15 @@ func main () {
 	defer pool.Close()
 	logger.Info("Terhubung ke database")
 
-	mux := http.NewServeMux()
+	userRepo := repository.NewPostgresUserRepository(pool)
+	authSvc := services.NewAuthService(userRepo)
+	authhandler := handler.NewAuthHandler(authSvc)
 
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "ok")
-	})
+	router := handler.NewRouter(authhandler)
 
 	logger.Info("Server up and running", "port", cfg.Port)
 	
-	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {
+	if err := http.ListenAndServe(":"+cfg.Port, router); err != nil {
 		logger.Error("Server berhenti", "error", err)
 		os.Exit(1)
 	}
